@@ -85,12 +85,24 @@ function snRequest(method, path, body) {
 }
 
 async function createTable() {
-  console.log('Creating u_vehicle_sales table...');
   const tabledef = JSON.parse(fs.readFileSync(path.join(__dirname, '../src/tables/vehicle_table.json'), 'utf8'));
+  const tableName = tabledef.table.name;
+
+  // Check if table already exists — skip creation if so to avoid ServiceNow recursion errors
+  console.log(`Checking if table ${tableName} exists...`);
+  const check = await snRequest('GET', `/api/now/table/sys_db_object?sysparm_query=name=${tableName}&sysparm_limit=1&sysparm_fields=sys_id,name`);
+  if (check.body && check.body.result && check.body.result.length > 0) {
+    const existingSysId = check.body.result[0].sys_id;
+    console.log(`  Table already exists (sys_id = ${existingSysId}), skipping creation.`);
+    await createOwnerField(existingSysId);
+    return check.body.result[0];
+  }
+
+  console.log(`Creating ${tableName} table...`);
   const res = await snRequest('POST', '/api/now/table/sys_db_object', {
-    name:         tabledef.table.name,
-    label:        tabledef.table.label,
-    super_class:  'task'
+    name:        tableName,
+    label:       tabledef.table.label,
+    super_class: 'task'
   });
   if (res.status >= 400) {
     throw new Error(`Table creation failed: ${JSON.stringify(res.body)}`);
@@ -101,7 +113,12 @@ async function createTable() {
   return res.body.result;
 }
 
-async function createOwnerField(tableSysId) {
+async function createOwnerField() {
+  const check = await snRequest('GET', '/api/now/table/sys_dictionary?sysparm_query=name=u_vehicle_sales^element=u_owner&sysparm_limit=1&sysparm_fields=sys_id');
+  if (check.body && check.body.result && check.body.result.length > 0) {
+    console.log('  u_owner field already exists, skipping.');
+    return;
+  }
   console.log('  Adding u_owner field (reference → sys_user)...');
   const res = await snRequest('POST', '/api/now/table/sys_dictionary', {
     name:          'u_vehicle_sales',
