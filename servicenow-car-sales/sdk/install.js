@@ -21,8 +21,17 @@ const path   = require('path');
 
 const args = parseArgs(process.argv.slice(2));
 
+// Normalise instance: accept short name, full hostname, or full URL
+function normaliseInstance(raw) {
+  if (!raw) return raw;
+  raw = raw.replace(/^https?:\/\//, '');   // strip protocol
+  raw = raw.split('/')[0];                  // strip path
+  raw = raw.replace(/\.service-now\.com$/i, ''); // strip suffix so we don't double it
+  return raw.trim();
+}
+
 const CONFIG = {
-  instance:  args.instance  || process.env.SN_INSTANCE,
+  instance:  normaliseInstance(args.instance  || process.env.SN_INSTANCE),
   user:      args.user      || process.env.SN_USER,
   password:  args.password  || process.env.SN_PASSWORD,
   component: args.component || 'all'

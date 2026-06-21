@@ -15,8 +15,16 @@ const fs     = require('fs');
 
 const args = parseArgs(process.argv.slice(2));
 
+function normaliseInstance(raw) {
+  if (!raw) return raw;
+  raw = raw.replace(/^https?:\/\//, '');
+  raw = raw.split('/')[0];
+  raw = raw.replace(/\.service-now\.com$/i, '');
+  return raw.trim();
+}
+
 const CONFIG = {
-  instance: args.instance || process.env.SN_INSTANCE,
+  instance: normaliseInstance(args.instance || process.env.SN_INSTANCE),
   user:     args.user     || process.env.SN_USER,
   password: args.password || process.env.SN_PASSWORD,
   output:   args.output   || 'vehicle_sales_export.json'
