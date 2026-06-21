@@ -1,0 +1,75 @@
+name: Delete from ServiceNow
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+      skip_table:
+        description: 'Leave the u_vehicle_sales table intact (only remove app components)'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+      dry_run:
+        description: 'Dry run — print what would be deleted without making changes'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+
+jobs:
+  delete:
+    name: Delete ServiceNow App
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Validate secrets
+        run: |
+          if [ -z "${{ secrets.SN_INSTANCE }}" ]; then
+            echo "::error::Secret SN_INSTANCE is not set"
+            exit 1
+          fi
+          if [ -z "${{ secrets.SN_USER }}" ]; then
+            echo "::error::Secret SN_USER is not set"
+            exit 1
+          fi
+          if [ -z "${{ secrets.SN_PASSWORD }}" ]; then
+            echo "::error::Secret SN_PASSWORD is not set"
+            exit 1
+          fi
+
+      - name: Delete app from ServiceNow
+        working-directory: servicenow-car-sales
+        env:
+          SN_INSTANCE: ${{ secrets.SN_INSTANCE }}
+          SN_USER:     ${{ secrets.SN_USER }}
+          SN_PASSWORD: ${{ secrets.SN_PASSWORD }}
+        run: |
+          ARGS=""
+          if [ "${{ github.event.inputs.skip_table }}" = "true" ]; then
+            ARGS="$ARGS --skip-table"
+          fi
+          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+            ARGS="$ARGS --dry-run"
+          fi
+          node sdk/delete.js $ARGS
