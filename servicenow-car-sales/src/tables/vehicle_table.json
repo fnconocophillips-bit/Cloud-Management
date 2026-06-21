@@ -116,7 +116,7 @@
         "label": "Owner",
         "type": "reference",
         "reference_table": "sys_user",
-        "mandatory": true
+        "mandatory": false
       },
       {
         "name": "u_notes",

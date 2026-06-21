@@ -102,6 +102,11 @@ async function main() {
   }
 
   console.log(`\nDone. Created: ${created} | Skipped: ${skipped} | Total: ${vehicles.length}`);
+
+  if (created === 0 && skipped === 0) {
+    console.error('ERROR: No records were created or skipped — all inserts failed.');
+    process.exit(1);
+  }
 }
 
 main().catch(err => { console.error('Failed:', err.message); process.exit(1); });

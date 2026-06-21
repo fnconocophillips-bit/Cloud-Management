@@ -94,7 +94,7 @@ async function createTable() {
   if (check.body && check.body.result && check.body.result.length > 0) {
     const existingSysId = check.body.result[0].sys_id;
     console.log(`  Table already exists (sys_id = ${existingSysId}), skipping creation.`);
-    await createOwnerField(existingSysId);
+    await createAllFields();
     return check.body.result[0];
   }
 
@@ -108,31 +108,57 @@ async function createTable() {
     throw new Error(`Table creation failed: ${JSON.stringify(res.body)}`);
   }
   console.log(`  Table created: sys_id = ${res.body.result && res.body.result.sys_id}`);
-  const tableSysId = res.body.result && res.body.result.sys_id;
-  if (tableSysId) await createOwnerField(tableSysId);
+  await createAllFields();
   return res.body.result;
 }
 
-async function createOwnerField() {
-  const check = await snRequest('GET', '/api/now/table/sys_dictionary?sysparm_query=name=u_vehicle_sales^element=u_owner&sysparm_limit=1&sysparm_fields=sys_id');
-  if (check.body && check.body.result && check.body.result.length > 0) {
-    console.log('  u_owner field already exists, skipping.');
-    return;
+// Map JSON field types to ServiceNow internal types
+const SN_TYPE_MAP = {
+  string:       'string',
+  integer:      'integer',
+  decimal:      'decimal',
+  date:         'glide_date',
+  email:        'email',
+  phone_number: 'phone_number',
+  reference:    'reference',
+  choice:       'string'
+};
+
+async function createAllFields() {
+  const tabledef = JSON.parse(fs.readFileSync(path.join(__dirname, '../src/tables/vehicle_table.json'), 'utf8'));
+
+  for (const field of tabledef.table.fields) {
+    const check = await snRequest(
+      'GET',
+      `/api/now/table/sys_dictionary?sysparm_query=name=u_vehicle_sales^element=${field.name}&sysparm_limit=1&sysparm_fields=sys_id`
+    );
+    if (check.body && check.body.result && check.body.result.length > 0) {
+      console.log(`  SKIP  ${field.name} (already exists)`);
+      continue;
+    }
+
+    const payload = {
+      name:          'u_vehicle_sales',
+      element:       field.name,
+      column_label:  field.label,
+      internal_type: SN_TYPE_MAP[field.type] || 'string',
+      active:        'true',
+      // Never enforce DB-level mandatory — use UI policies instead so
+      // the REST API and demo data loader aren't blocked
+      mandatory:     'false'
+    };
+
+    if (field.max_length)    payload.max_length  = String(field.max_length);
+    if (field.default_value !== undefined) payload.default_value = String(field.default_value);
+    if (field.type === 'reference') payload.reference = field.reference_table;
+
+    const res = await snRequest('POST', '/api/now/table/sys_dictionary', payload);
+    if (res.status >= 400) {
+      console.error(`  FAIL  ${field.name} (${res.status}): ${JSON.stringify(res.body)}`);
+    } else {
+      console.log(`  OK    ${field.name} (${field.type})`);
+    }
   }
-  console.log('  Adding u_owner field (reference → sys_user)...');
-  const res = await snRequest('POST', '/api/now/table/sys_dictionary', {
-    name:          'u_vehicle_sales',
-    element:       'u_owner',
-    column_label:  'Owner',
-    internal_type: 'reference',
-    reference:     'sys_user',
-    mandatory:     'true',
-    active:        'true'
-  });
-  if (res.status >= 400) {
-    throw new Error(`Owner field creation failed: ${JSON.stringify(res.body)}`);
-  }
-  console.log(`  u_owner field created: sys_id = ${res.body.result && res.body.result.sys_id}`);
 }
 
 async function uploadScriptInclude() {
@@ -184,11 +210,11 @@ async function uploadClientScript() {
 }
 
 const COMPONENTS = {
-  table:          createTable,
+  table:           createTable,
   script_includes: uploadScriptInclude,
-  business_rules: uploadBusinessRules,
-  client_scripts: uploadClientScript,
-  ui_policies:    () => Promise.resolve() // placeholder — extend as needed
+  business_rules:  uploadBusinessRules,
+  client_scripts:  uploadClientScript,
+  ui_policies:     () => Promise.resolve()
 };
 
 async function main() {
