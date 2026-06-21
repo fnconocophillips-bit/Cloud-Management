@@ -138,7 +138,7 @@ jobs:
           node sdk/create_app_menu.js
 
       - name: Load demo data
-        if: steps.changes.outputs.has_demo != '0'
+        if: steps.changes.outputs.has_demo != '0' || steps.changes.outputs.has_table != '0'
         working-directory: servicenow-car-sales
         env:
           SN_INSTANCE: ${{ secrets.SN_INSTANCE }}
