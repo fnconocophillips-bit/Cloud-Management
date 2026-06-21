@@ -85,10 +85,10 @@ async function main() {
       continue;
     }
 
-    // Strip empty strings so ServiceNow doesn't reject type-mismatched blanks
+    // Strip empty strings and internal _meta keys before posting
     const payload = {};
     for (const [key, val] of Object.entries(vehicle)) {
-      if (val !== '') payload[key] = val;
+      if (val !== '' && !key.startsWith('_')) payload[key] = val;
     }
 
     const res = await snRequest('POST', '/api/now/table/u_vehicle_sales', payload);

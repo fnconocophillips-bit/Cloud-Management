@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
  * Creates the Vehicle Sales Tracker application menu and modules in ServiceNow.
+ * Idempotent — skips creation if the menu already exists, upserts modules.
  *
  * Usage:
  *   node create_app_menu.js
@@ -58,55 +59,93 @@ function snRequest(method, apiPath, body) {
   });
 }
 
-async function main() {
-  const menu = JSON.parse(
-    fs.readFileSync(path.join(__dirname, '../src/app_menu/application_menu.json'), 'utf8')
-  ).application;
+async function getOrCreateMenu(menu) {
+  // sys_app_list is the correct table for Application Menus in the navigator
+  const check = await snRequest(
+    'GET',
+    `/api/now/table/sys_app_list?sysparm_query=title=${encodeURIComponent(menu.name)}&sysparm_limit=1&sysparm_fields=sys_id,title`
+  );
 
-  console.log(`Creating application: ${menu.name}...`);
-  const appRes = await snRequest('POST', '/api/now/table/sys_app_application', {
+  if (check.body && check.body.result && check.body.result.length > 0) {
+    const sysId = check.body.result[0].sys_id;
+    console.log(`  Application menu already exists (sys_id = ${sysId}), reusing.`);
+    return sysId;
+  }
+
+  console.log(`  Creating application menu: ${menu.name}...`);
+  const res = await snRequest('POST', '/api/now/table/sys_app_list', {
     title:       menu.name,
     description: menu.description,
     active:      'true',
     category:    menu.category
   });
 
-  if (appRes.status >= 400) {
-    throw new Error(`Application creation failed (${appRes.status}): ${JSON.stringify(appRes.body)}`);
+  if (res.status >= 400) {
+    throw new Error(`Application menu creation failed (${res.status}): ${JSON.stringify(res.body)}`);
   }
 
-  const appSysId = appRes.body.result && appRes.body.result.sys_id;
-  console.log(`  Application created: sys_id = ${appSysId}`);
+  const sysId = res.body.result && res.body.result.sys_id;
+  console.log(`  Application menu created (sys_id = ${sysId})`);
+  return sysId;
+}
 
-  const modules = menu.modules.filter(m => m.type !== 'separator' && m.type !== 'report');
+async function upsertModule(appSysId, mod) {
+  // Check if module already exists for this app with the same title
+  const check = await snRequest(
+    'GET',
+    `/api/now/table/sys_app_module?sysparm_query=application=${appSysId}^title=${encodeURIComponent(mod.title)}&sysparm_limit=1&sysparm_fields=sys_id`
+  );
 
-  for (const mod of modules) {
-    console.log(`  Adding module: ${mod.title}...`);
+  const payload = {
+    application: appSysId,
+    title:       mod.title,
+    active:      mod.active ? 'true' : 'false',
+    order:       String(mod.order)
+  };
 
-    const payload = {
-      application:  appSysId,
-      title:        mod.title,
-      active:       mod.active ? 'true' : 'false',
-      order:        String(mod.order)
-    };
+  if (mod.type === 'list') {
+    payload.link_type = 'LIST';
+    payload.name      = mod.table;
+    if (mod.filter) payload.query = mod.filter;
+  } else if (mod.type === 'new_record') {
+    payload.link_type = 'NEW';
+    payload.name      = mod.table;
+  } else if (mod.type === 'url') {
+    payload.link_type = 'URL';
+    payload.href      = mod.url;
+  }
 
-    if (mod.type === 'list') {
-      payload.link_type = 'LIST';
-      payload.name      = mod.table;
-      if (mod.filter) payload.filter = mod.filter;
-    } else if (mod.type === 'new_record') {
-      payload.link_type = 'NEW';
-      payload.name      = mod.table;
-    } else if (mod.type === 'url') {
-      payload.link_type = 'URL';
-      payload.href      = mod.url;
+  if (check.body && check.body.result && check.body.result.length > 0) {
+    const existingSysId = check.body.result[0].sys_id;
+    const res = await snRequest('PATCH', `/api/now/table/sys_app_module/${existingSysId}`, payload);
+    console.log(`  PATCH  ${mod.title} → ${res.status}`);
+  } else {
+    const res = await snRequest('POST', '/api/now/table/sys_app_module', payload);
+    console.log(`  POST   ${mod.title} → ${res.status}`);
+    if (res.status >= 400) {
+      console.error(`         Error: ${JSON.stringify(res.body)}`);
     }
+  }
+}
 
-    const modRes = await snRequest('POST', '/api/now/table/sys_app_module', payload);
-    console.log(`    Status: ${modRes.status}`);
+async function main() {
+  const menu = JSON.parse(
+    fs.readFileSync(path.join(__dirname, '../src/app_menu/application_menu.json'), 'utf8')
+  ).application;
+
+  console.log(`\nDeploying application menu: ${menu.name}`);
+  console.log(`Instance: ${INSTANCE}.service-now.com\n`);
+
+  const appSysId = await getOrCreateMenu(menu);
+
+  const deployableModules = menu.modules.filter(m => m.type !== 'separator' && m.type !== 'report');
+  console.log(`\nUpserting ${deployableModules.length} modules...`);
+
+  for (const mod of deployableModules) {
+    await upsertModule(appSysId, mod);
   }
 
-  console.log('\nApplication menu created successfully.');
+  console.log('\nApplication menu deployment complete.');
 }
 
 main().catch(err => { console.error('Failed:', err.message); process.exit(1); });
