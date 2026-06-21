@@ -1,0 +1,41 @@
+{
+  "form_layout": {
+    "table": "u_vehicle_sales",
+    "sections": [
+      {
+        "name": "Vehicle Information",
+        "columns": 2,
+        "fields": [
+          ["u_vin",       "u_condition"],
+          ["u_make",      "u_mileage"],
+          ["u_model",     "u_color"],
+          ["u_year",      ""]
+        ]
+      },
+      {
+        "name": "Pricing & Status",
+        "columns": 2,
+        "fields": [
+          ["u_sale_status",  "u_salesperson"],
+          ["u_asking_price", "u_sale_price"],
+          ["u_sale_date",    ""]
+        ]
+      },
+      {
+        "name": "Buyer Information",
+        "columns": 2,
+        "fields": [
+          ["u_buyer_name",  "u_buyer_phone"],
+          ["u_buyer_email", ""]
+        ]
+      },
+      {
+        "name": "Notes",
+        "columns": 1,
+        "fields": [
+          ["u_notes"]
+        ]
+      }
+    ]
+  }
+}

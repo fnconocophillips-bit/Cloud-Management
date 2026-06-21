@@ -1,0 +1,37 @@
+{
+  "list_view": {
+    "table": "u_vehicle_sales",
+    "name": "Default",
+    "columns": [
+      "u_vin",
+      "u_year",
+      "u_make",
+      "u_model",
+      "u_color",
+      "u_condition",
+      "u_asking_price",
+      "u_sale_price",
+      "u_sale_status",
+      "u_sale_date",
+      "u_salesperson"
+    ],
+    "default_sort": {
+      "field": "sys_created_on",
+      "direction": "descending"
+    },
+    "filters": [
+      {
+        "name": "Available Vehicles",
+        "condition": "u_sale_status=available"
+      },
+      {
+        "name": "Sold This Month",
+        "condition": "u_sale_status=sold^u_sale_dateDATEPARTthis month"
+      },
+      {
+        "name": "All Vehicles",
+        "condition": ""
+      }
+    ]
+  }
+}

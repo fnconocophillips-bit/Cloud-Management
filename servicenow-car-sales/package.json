@@ -1,0 +1,16 @@
+{
+  "name": "servicenow-car-sales",
+  "version": "1.0.0",
+  "description": "ServiceNow application to track vehicle sales inventory and revenue",
+  "main": "sdk/install.js",
+  "scripts": {
+    "install-app": "node sdk/install.js",
+    "export":      "node sdk/export.js",
+    "test":        "echo 'Deploy ATF tests via ServiceNow Test Framework'"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "keywords": ["servicenow", "car-sales", "vehicle", "inventory"],
+  "license": "MIT"
+}
