@@ -60,10 +60,10 @@ function snRequest(method, apiPath, body) {
 }
 
 async function getOrCreateMenu(menu) {
-  // sys_app_list is the correct table for Application Menus in the navigator
+  // sys_app_application is the correct table for Application Menus in the navigator
   const check = await snRequest(
     'GET',
-    `/api/now/table/sys_app_list?sysparm_query=title=${encodeURIComponent(menu.name)}&sysparm_limit=1&sysparm_fields=sys_id,title`
+    `/api/now/table/sys_app_application?sysparm_query=title=${encodeURIComponent(menu.name)}&sysparm_limit=1&sysparm_fields=sys_id,title`
   );
 
   if (check.body && check.body.result && check.body.result.length > 0) {
@@ -73,7 +73,7 @@ async function getOrCreateMenu(menu) {
   }
 
   console.log(`  Creating application menu: ${menu.name}...`);
-  const res = await snRequest('POST', '/api/now/table/sys_app_list', {
+  const res = await snRequest('POST', '/api/now/table/sys_app_application', {
     title:       menu.name,
     description: menu.description,
     active:      'true',
