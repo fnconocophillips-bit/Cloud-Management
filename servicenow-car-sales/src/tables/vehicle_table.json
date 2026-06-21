@@ -1,0 +1,129 @@
+{
+  "table": {
+    "name": "u_vehicle_sales",
+    "label": "Vehicle Sale",
+    "label_plural": "Vehicle Sales",
+    "extends": "task",
+    "is_extendable": false,
+    "fields": [
+      {
+        "name": "u_vin",
+        "label": "VIN",
+        "type": "string",
+        "max_length": 17,
+        "mandatory": true,
+        "unique": true,
+        "comments": "Vehicle Identification Number (17 characters)"
+      },
+      {
+        "name": "u_make",
+        "label": "Make",
+        "type": "string",
+        "max_length": 50,
+        "mandatory": true,
+        "comments": "Manufacturer name (e.g. Toyota, Ford)"
+      },
+      {
+        "name": "u_model",
+        "label": "Model",
+        "type": "string",
+        "max_length": 100,
+        "mandatory": true
+      },
+      {
+        "name": "u_year",
+        "label": "Year",
+        "type": "integer",
+        "mandatory": true
+      },
+      {
+        "name": "u_color",
+        "label": "Color",
+        "type": "string",
+        "max_length": 50
+      },
+      {
+        "name": "u_mileage",
+        "label": "Mileage",
+        "type": "integer",
+        "default_value": 0
+      },
+      {
+        "name": "u_condition",
+        "label": "Condition",
+        "type": "choice",
+        "choices": [
+          { "value": "new", "label": "New" },
+          { "value": "used", "label": "Used" },
+          { "value": "certified", "label": "Certified Pre-Owned" }
+        ],
+        "mandatory": true,
+        "default_value": "new"
+      },
+      {
+        "name": "u_asking_price",
+        "label": "Asking Price",
+        "type": "decimal",
+        "mandatory": true
+      },
+      {
+        "name": "u_sale_price",
+        "label": "Sale Price",
+        "type": "decimal"
+      },
+      {
+        "name": "u_sale_status",
+        "label": "Sale Status",
+        "type": "choice",
+        "choices": [
+          { "value": "available", "label": "Available" },
+          { "value": "reserved", "label": "Reserved" },
+          { "value": "sold", "label": "Sold" },
+          { "value": "returned", "label": "Returned" }
+        ],
+        "mandatory": true,
+        "default_value": "available"
+      },
+      {
+        "name": "u_sale_date",
+        "label": "Sale Date",
+        "type": "date"
+      },
+      {
+        "name": "u_buyer_name",
+        "label": "Buyer Name",
+        "type": "string",
+        "max_length": 100
+      },
+      {
+        "name": "u_buyer_email",
+        "label": "Buyer Email",
+        "type": "email"
+      },
+      {
+        "name": "u_buyer_phone",
+        "label": "Buyer Phone",
+        "type": "phone_number"
+      },
+      {
+        "name": "u_salesperson",
+        "label": "Salesperson",
+        "type": "reference",
+        "reference_table": "sys_user"
+      },
+      {
+        "name": "u_owner",
+        "label": "Owner",
+        "type": "reference",
+        "reference_table": "sys_user",
+        "mandatory": true
+      },
+      {
+        "name": "u_notes",
+        "label": "Notes",
+        "type": "string",
+        "max_length": 4000
+      }
+    ]
+  }
+}

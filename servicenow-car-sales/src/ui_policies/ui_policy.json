@@ -1,0 +1,35 @@
+{
+  "ui_policies": [
+    {
+      "name": "Hide Mileage for New Vehicles",
+      "table": "u_vehicle_sales",
+      "conditions": "u_condition=new",
+      "run_scripts": false,
+      "actions": [
+        { "field": "u_mileage", "mandatory": false, "visible": false, "read_only": true }
+      ]
+    },
+    {
+      "name": "Require Mileage for Used Vehicles",
+      "table": "u_vehicle_sales",
+      "conditions": "u_conditionINused,certified",
+      "run_scripts": false,
+      "actions": [
+        { "field": "u_mileage", "mandatory": true, "visible": true, "read_only": false }
+      ]
+    },
+    {
+      "name": "Lock Fields After Sale",
+      "table": "u_vehicle_sales",
+      "conditions": "u_sale_status=sold",
+      "run_scripts": false,
+      "actions": [
+        { "field": "u_vin",          "mandatory": false, "visible": true, "read_only": true },
+        { "field": "u_make",         "mandatory": false, "visible": true, "read_only": true },
+        { "field": "u_model",        "mandatory": false, "visible": true, "read_only": true },
+        { "field": "u_year",         "mandatory": false, "visible": true, "read_only": true },
+        { "field": "u_asking_price", "mandatory": false, "visible": true, "read_only": true }
+      ]
+    }
+  ]
+}
