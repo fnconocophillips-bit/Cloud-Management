@@ -1,0 +1,155 @@
+name: Deploy to ServiceNow
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'servicenow-car-sales/**'
+
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+
+jobs:
+  deploy:
+    name: Deploy ServiceNow App
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'production' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Validate secrets
+        run: |
+          if [ -z "${{ secrets.SN_INSTANCE }}" ]; then
+            echo "::error::Secret SN_INSTANCE is not set"
+            exit 1
+          fi
+          if [ -z "${{ secrets.SN_USER }}" ]; then
+            echo "::error::Secret SN_USER is not set"
+            exit 1
+          fi
+          if [ -z "${{ secrets.SN_PASSWORD }}" ]; then
+            echo "::error::Secret SN_PASSWORD is not set"
+            exit 1
+          fi
+
+      - name: Detect changed files
+        id: changes
+        run: |
+          # On first push there is no previous commit to diff against
+          if git rev-parse HEAD~1 >/dev/null 2>&1; then
+            CHANGED=$(git diff --name-only HEAD~1 HEAD -- servicenow-car-sales/)
+          else
+            CHANGED=$(git ls-files servicenow-car-sales/)
+          fi
+
+          echo "Changed files:"
+          echo "$CHANGED"
+
+          echo "has_table=$(echo "$CHANGED"     | grep -c 'src/tables/'          || true)" >> $GITHUB_OUTPUT
+          echo "has_br=$(echo "$CHANGED"        | grep -c 'src/business_rules/'  || true)" >> $GITHUB_OUTPUT
+          echo "has_si=$(echo "$CHANGED"        | grep -c 'src/script_includes/' || true)" >> $GITHUB_OUTPUT
+          echo "has_cs=$(echo "$CHANGED"        | grep -c 'src/client_scripts/'  || true)" >> $GITHUB_OUTPUT
+          echo "has_ui=$(echo "$CHANGED"        | grep -c 'src/ui_policies/'     || true)" >> $GITHUB_OUTPUT
+
+      - name: Deploy table schema
+        if: steps.changes.outputs.has_table != '0'
+        working-directory: servicenow-car-sales
+        env:
+          SN_INSTANCE: ${{ secrets.SN_INSTANCE }}
+          SN_USER:     ${{ secrets.SN_USER }}
+          SN_PASSWORD: ${{ secrets.SN_PASSWORD }}
+        run: |
+          echo "Deploying table schema..."
+          node sdk/install.js --component table
+
+      - name: Deploy business rules
+        if: steps.changes.outputs.has_br != '0'
+        working-directory: servicenow-car-sales
+        env:
+          SN_INSTANCE: ${{ secrets.SN_INSTANCE }}
+          SN_USER:     ${{ secrets.SN_USER }}
+          SN_PASSWORD: ${{ secrets.SN_PASSWORD }}
+        run: |
+          echo "Deploying business rules..."
+          node sdk/install.js --component business_rules
+
+      - name: Deploy script includes
+        if: steps.changes.outputs.has_si != '0'
+        working-directory: servicenow-car-sales
+        env:
+          SN_INSTANCE: ${{ secrets.SN_INSTANCE }}
+          SN_USER:     ${{ secrets.SN_USER }}
+          SN_PASSWORD: ${{ secrets.SN_PASSWORD }}
+        run: |
+          echo "Deploying script includes..."
+          node sdk/install.js --component script_includes
+
+      - name: Deploy client scripts
+        if: steps.changes.outputs.has_cs != '0'
+        working-directory: servicenow-car-sales
+        env:
+          SN_INSTANCE: ${{ secrets.SN_INSTANCE }}
+          SN_USER:     ${{ secrets.SN_USER }}
+          SN_PASSWORD: ${{ secrets.SN_PASSWORD }}
+        run: |
+          echo "Deploying client scripts..."
+          node sdk/install.js --component client_scripts
+
+      - name: Deploy UI policies
+        if: steps.changes.outputs.has_ui != '0'
+        working-directory: servicenow-car-sales
+        env:
+          SN_INSTANCE: ${{ secrets.SN_INSTANCE }}
+          SN_USER:     ${{ secrets.SN_USER }}
+          SN_PASSWORD: ${{ secrets.SN_PASSWORD }}
+        run: |
+          echo "Deploying UI policies..."
+          node sdk/install.js --component ui_policies
+
+      - name: Export post-deploy snapshot
+        working-directory: servicenow-car-sales
+        env:
+          SN_INSTANCE: ${{ secrets.SN_INSTANCE }}
+          SN_USER:     ${{ secrets.SN_USER }}
+          SN_PASSWORD: ${{ secrets.SN_PASSWORD }}
+        run: |
+          node sdk/export.js --output /tmp/snapshot.json
+          echo "--- Deployment Summary ---"
+          cat /tmp/snapshot.json | node -e "
+            const d = JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));
+            console.log('Total records : ' + d.total_records);
+            console.log('Sold          : ' + d.sold);
+            console.log('Available     : ' + d.available);
+            console.log('Reserved      : ' + d.reserved);
+          "
+
+      - name: Upload snapshot artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: servicenow-snapshot-${{ github.sha }}
+          path: /tmp/snapshot.json
+          retention-days: 30
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "::error::Deployment to ServiceNow failed. Check the logs above for details."
+          echo "Commit : ${{ github.sha }}"
+          echo "Author : ${{ github.actor }}"
+          echo "Branch : ${{ github.ref_name }}"

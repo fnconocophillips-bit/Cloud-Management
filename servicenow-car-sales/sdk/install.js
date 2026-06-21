@@ -3,11 +3,14 @@
  * ServiceNow Car Sales App — SDK Installer
  *
  * Usage:
- *   node install.js --instance <instance-name> --user <admin-user> --password <password>
+ *   node install.js [--component <table|business_rules|script_includes|client_scripts|ui_policies|all>]
  *
- * This script uses the ServiceNow Table API and Scripted REST API to:
- *   1. Create the u_vehicle_sales table
- *   2. Upload business rules, script includes, client scripts, and UI policies
+ * Credentials via flags or environment variables:
+ *   --instance / SN_INSTANCE
+ *   --user     / SN_USER
+ *   --password / SN_PASSWORD
+ *
+ * Omitting --component (or passing 'all') deploys every component.
  */
 
 'use strict';
@@ -19,9 +22,10 @@ const path   = require('path');
 const args = parseArgs(process.argv.slice(2));
 
 const CONFIG = {
-  instance: args.instance || process.env.SN_INSTANCE,
-  user:     args.user     || process.env.SN_USER,
-  password: args.password || process.env.SN_PASSWORD
+  instance:  args.instance  || process.env.SN_INSTANCE,
+  user:      args.user      || process.env.SN_USER,
+  password:  args.password  || process.env.SN_PASSWORD,
+  component: args.component || 'all'
 };
 
 if (!CONFIG.instance || !CONFIG.user || !CONFIG.password) {
@@ -134,16 +138,34 @@ async function uploadClientScript() {
   console.log(`  Client script status: ${res.status}`);
 }
 
+const COMPONENTS = {
+  table:          createTable,
+  script_includes: uploadScriptInclude,
+  business_rules: uploadBusinessRules,
+  client_scripts: uploadClientScript,
+  ui_policies:    () => Promise.resolve() // placeholder — extend as needed
+};
+
 async function main() {
   try {
-    console.log(`\nConnecting to ${BASE_URL}...\n`);
-    await createTable();
-    await uploadScriptInclude();
-    await uploadBusinessRules();
-    await uploadClientScript();
-    console.log('\nInstallation complete.');
+    console.log(`\nConnecting to ${BASE_URL}...`);
+    console.log(`Component: ${CONFIG.component}\n`);
+
+    if (CONFIG.component === 'all') {
+      for (const fn of Object.values(COMPONENTS)) await fn();
+    } else {
+      const fn = COMPONENTS[CONFIG.component];
+      if (!fn) {
+        console.error(`Unknown component: ${CONFIG.component}`);
+        console.error(`Valid options: ${Object.keys(COMPONENTS).join(', ')}, all`);
+        process.exit(1);
+      }
+      await fn();
+    }
+
+    console.log('\nDeployment complete.');
   } catch (err) {
-    console.error('\nInstallation failed:', err.message);
+    console.error('\nDeployment failed:', err.message);
     process.exit(1);
   }
 }
