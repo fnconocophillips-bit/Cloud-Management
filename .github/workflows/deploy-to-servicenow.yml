@@ -66,6 +66,8 @@ jobs:
           echo "has_si=$(echo "$CHANGED"        | grep -c 'src/script_includes/' || true)" >> $GITHUB_OUTPUT
           echo "has_cs=$(echo "$CHANGED"        | grep -c 'src/client_scripts/'  || true)" >> $GITHUB_OUTPUT
           echo "has_ui=$(echo "$CHANGED"        | grep -c 'src/ui_policies/'     || true)" >> $GITHUB_OUTPUT
+          echo "has_menu=$(echo "$CHANGED"      | grep -c 'src/app_menu/'        || true)" >> $GITHUB_OUTPUT
+          echo "has_demo=$(echo "$CHANGED"      | grep -c 'src/demo_data/'       || true)" >> $GITHUB_OUTPUT
 
       - name: Deploy table schema
         if: steps.changes.outputs.has_table != '0'
@@ -121,6 +123,28 @@ jobs:
         run: |
           echo "Deploying UI policies..."
           node sdk/install.js --component ui_policies
+
+      - name: Create application menu
+        if: steps.changes.outputs.has_menu != '0'
+        working-directory: servicenow-car-sales
+        env:
+          SN_INSTANCE: ${{ secrets.SN_INSTANCE }}
+          SN_USER:     ${{ secrets.SN_USER }}
+          SN_PASSWORD: ${{ secrets.SN_PASSWORD }}
+        run: |
+          echo "Creating application menu..."
+          node sdk/create_app_menu.js
+
+      - name: Load demo data
+        if: steps.changes.outputs.has_demo != '0'
+        working-directory: servicenow-car-sales
+        env:
+          SN_INSTANCE: ${{ secrets.SN_INSTANCE }}
+          SN_USER:     ${{ secrets.SN_USER }}
+          SN_PASSWORD: ${{ secrets.SN_PASSWORD }}
+        run: |
+          echo "Loading demo vehicles..."
+          node sdk/load_demo_data.js
 
       - name: Export post-deploy snapshot
         working-directory: servicenow-car-sales

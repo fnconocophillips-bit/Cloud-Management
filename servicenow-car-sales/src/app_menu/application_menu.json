@@ -1,0 +1,114 @@
+{
+  "application": {
+    "name": "Vehicle Sales Tracker",
+    "scope": "global",
+    "category": "business_applications",
+    "description": "Track vehicle inventory, manage sales, and report on dealership performance.",
+    "active": true,
+    "modules": [
+      {
+        "title": "Home",
+        "type": "url",
+        "url": "u_vehicle_sales_list.do",
+        "order": 10,
+        "active": true
+      },
+      {
+        "title": "------- Inventory -------",
+        "type": "separator",
+        "order": 20
+      },
+      {
+        "title": "All Vehicles",
+        "type": "list",
+        "table": "u_vehicle_sales",
+        "filter": "",
+        "order": 30,
+        "active": true
+      },
+      {
+        "title": "Available",
+        "type": "list",
+        "table": "u_vehicle_sales",
+        "filter": "u_sale_status=available",
+        "order": 40,
+        "active": true
+      },
+      {
+        "title": "Reserved",
+        "type": "list",
+        "table": "u_vehicle_sales",
+        "filter": "u_sale_status=reserved",
+        "order": 50,
+        "active": true
+      },
+      {
+        "title": "------- Sales -------",
+        "type": "separator",
+        "order": 60
+      },
+      {
+        "title": "Sold This Month",
+        "type": "list",
+        "table": "u_vehicle_sales",
+        "filter": "u_sale_status=sold^u_sale_dateDATEPARTthis month",
+        "order": 70,
+        "active": true
+      },
+      {
+        "title": "All Sold",
+        "type": "list",
+        "table": "u_vehicle_sales",
+        "filter": "u_sale_status=sold",
+        "order": 80,
+        "active": true
+      },
+      {
+        "title": "Returned",
+        "type": "list",
+        "table": "u_vehicle_sales",
+        "filter": "u_sale_status=returned",
+        "order": 90,
+        "active": true
+      },
+      {
+        "title": "------- Create -------",
+        "type": "separator",
+        "order": 100
+      },
+      {
+        "title": "Add New Vehicle",
+        "type": "new_record",
+        "table": "u_vehicle_sales",
+        "order": 110,
+        "active": true
+      },
+      {
+        "title": "------- Reports -------",
+        "type": "separator",
+        "order": 120
+      },
+      {
+        "title": "Sales by Make",
+        "type": "report",
+        "report_name": "Vehicle Sales by Make",
+        "order": 130,
+        "active": true
+      },
+      {
+        "title": "Revenue This Month",
+        "type": "report",
+        "report_name": "Monthly Revenue",
+        "order": 140,
+        "active": true
+      },
+      {
+        "title": "Top Salespeople",
+        "type": "report",
+        "report_name": "Top Salespeople",
+        "order": 150,
+        "active": true
+      }
+    ]
+  }
+}

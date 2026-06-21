@@ -4,9 +4,11 @@
   "description": "ServiceNow application to track vehicle sales inventory and revenue",
   "main": "sdk/install.js",
   "scripts": {
-    "install-app": "node sdk/install.js",
-    "export":      "node sdk/export.js",
-    "test":        "echo 'Deploy ATF tests via ServiceNow Test Framework'"
+    "install-app":  "node sdk/install.js",
+    "create-menu":  "node sdk/create_app_menu.js",
+    "load-demo":    "node sdk/load_demo_data.js",
+    "export":       "node sdk/export.js",
+    "test":         "echo 'Deploy ATF tests via ServiceNow Test Framework'"
   },
   "engines": {
     "node": ">=14.0.0"
